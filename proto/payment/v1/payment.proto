@@ -1,0 +1,106 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/example/payment/v1;paymentv1";
+
+// PaymentService handles payment authorization operations
+service PaymentService {
+  // AuthorizePayment processes a payment authorization request
+  // Idempotent: same idempotency_key returns same response
+  rpc AuthorizePayment(AuthorizePaymentRequest) returns (AuthorizePaymentResponse);
+
+  // GetPayment retrieves payment details by ID
+  rpc GetPayment(GetPaymentRequest) returns (GetPaymentResponse);
+
+  // GetAccountBalance retrieves account balance
+  rpc GetAccountBalance(GetAccountBalanceRequest) returns (GetAccountBalanceResponse);
+}
+
+message AuthorizePaymentRequest {
+  // Unique key for idempotency (UUID v4 recommended)
+  // Required. Must be unique per logical payment attempt.
+  string idempotency_key = 1;
+
+  // Account ID of the payer (sender)
+  string payer_account_id = 2;
+
+  // Account ID of the payee (recipient)
+  string payee_account_id = 3;
+
+  // Amount in smallest currency unit (e.g., cents for USD)
+  int64 amount_cents = 4;
+
+  // ISO 4217 currency code (e.g., "USD", "EUR")
+  string currency = 5;
+
+  // Optional description/memo for the payment
+  string description = 6;
+}
+
+message AuthorizePaymentResponse {
+  // Unique payment identifier (ULID)
+  string payment_id = 1;
+
+  // Authorization status
+  PaymentStatus status = 2;
+
+  // Error details if status is DECLINED
+  PaymentError error = 3;
+
+  // Timestamp when payment was processed (RFC 3339)
+  string processed_at = 4;
+}
+
+message GetPaymentRequest {
+  string payment_id = 1;
+}
+
+message GetPaymentResponse {
+  Payment payment = 1;
+}
+
+message GetAccountBalanceRequest {
+  string account_id = 1;
+}
+
+message GetAccountBalanceResponse {
+  string account_id = 1;
+  int64 available_balance_cents = 2;
+  int64 pending_balance_cents = 3;
+  string currency = 4;
+}
+
+message Payment {
+  string payment_id = 1;
+  string payer_account_id = 2;
+  string payee_account_id = 3;
+  int64 amount_cents = 4;
+  string currency = 5;
+  PaymentStatus status = 6;
+  string description = 7;
+  string created_at = 8;
+  string updated_at = 9;
+}
+
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_AUTHORIZED = 1;
+  PAYMENT_STATUS_DECLINED = 2;
+  PAYMENT_STATUS_DUPLICATE = 3;  // Idempotent replay
+}
+
+message PaymentError {
+  PaymentErrorCode code = 1;
+  string message = 2;
+}
+
+enum PaymentErrorCode {
+  PAYMENT_ERROR_CODE_UNSPECIFIED = 0;
+  PAYMENT_ERROR_CODE_INSUFFICIENT_FUNDS = 1;
+  PAYMENT_ERROR_CODE_ACCOUNT_NOT_FOUND = 2;
+  PAYMENT_ERROR_CODE_INVALID_AMOUNT = 3;
+  PAYMENT_ERROR_CODE_SAME_ACCOUNT = 4;
+  PAYMENT_ERROR_CODE_CURRENCY_MISMATCH = 5;
+  PAYMENT_ERROR_CODE_RATE_LIMITED = 6;
+}

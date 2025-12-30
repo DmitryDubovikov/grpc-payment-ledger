@@ -1,0 +1,120 @@
+[project]
+name = "payment-service"
+version = "0.1.0"
+description = "gRPC Payment Authorization & Ledger Service"
+requires-python = ">=3.12"
+dependencies = [
+    "grpcio>=1.60.0",
+    "grpcio-tools>=1.60.0",
+    "grpcio-reflection>=1.60.0",
+    "grpcio-health-checking>=1.60.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "asyncpg>=0.29.0",
+    "alembic>=1.13.0",
+    "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+    "structlog>=24.1.0",
+    "redis>=5.0.0",
+    "python-ulid>=2.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "testcontainers>=3.7.0",
+    "grpcio-testing>=1.60.0",
+    "ruff>=0.1.0",
+    "mypy>=1.8.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "ARG",    # flake8-unused-arguments
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "PTH",    # flake8-use-pathlib
+    "ERA",    # eradicate (commented-out code)
+    "PL",     # Pylint
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults (needed for FastAPI Depends)
+    "PLR0913", # too many arguments
+    "PLR2004", # magic value comparison
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "ARG",    # unused arguments in tests (fixtures)
+    "PLR2004", # magic values in tests are fine
+]
+"src/payment_service/proto/**/*.py" = [
+    "ALL",    # ignore generated protobuf files
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["payment_service"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+exclude = ["src/payment_service/proto/"]
+
+[[tool.mypy.overrides]]
+module = [
+    "grpc",
+    "grpc.*",
+    "grpc_health",
+    "grpc_health.*",
+    "grpc_reflection",
+    "grpc_reflection.*",
+    "payment_service.proto.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "payment_service.api.grpc_handlers",
+    "payment_service.grpc_server",
+]
+disallow_untyped_calls = false
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/payment_service"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/payment_service"]
+
+[tool.hatch.metadata]
+allow-direct-references = true
