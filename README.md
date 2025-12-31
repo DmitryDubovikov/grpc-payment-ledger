@@ -51,28 +51,43 @@ Venmo-style payment authorization service demonstrating idempotent payment proce
 
 ## Quick Start
 
-```bash
-# Clone and enter directory
-git clone <repo>
-cd grpc-payment-ledger
+Run the service with Docker (no local Python required):
 
-# Install dependencies
+```bash
+# Start all services (PostgreSQL, Redis, Redpanda, Payment Service)
+make dev-up
+
+# Apply database migrations
+make migrate
+
+# Create test accounts
+make reset-test-data
+
+# Verify service is running
+docker run --rm --network=host fullstorydev/grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check
+```
+
+See [Manual Testing Guide](docs/iterations/iteration-1-manual-testing.md) for detailed API testing examples.
+
+### Local Development
+
+For editing code and running locally:
+
+```bash
+# Install dependencies (requires Python 3.12+ and uv)
 make install-dev
 
-# Start infrastructure (PostgreSQL, Redis, Redpanda)
+# Start infrastructure only
 make up
 
-# Run database migrations
+# Apply migrations
 make migrate
 
 # Generate protobuf code
 make proto
 
-# Start gRPC server
+# Run gRPC server locally
 make run
-
-# Verify with grpcurl (via Docker)
-docker run --rm --network=host fullstorydev/grpcurl -plaintext localhost:50051 grpc.health.v1.Health/Check
 ```
 
 ## gRPC Services

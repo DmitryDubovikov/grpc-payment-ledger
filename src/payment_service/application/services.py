@@ -64,7 +64,7 @@ class PaymentService:
                     expires_at=datetime.now(UTC) + timedelta(hours=24),
                 )
 
-            result = await self._validate_and_create_payment(cmd)
+            result = await self._validate_and_create_payment(cmd, log)
             if result.status == PaymentStatus.DECLINED:
                 await self.uow.idempotency.mark_failed(cmd.idempotency_key)
                 await self.uow.commit()
@@ -101,7 +101,7 @@ class PaymentService:
 
             await self.uow.commit()
 
-            log.info("payment_authorized", payment_id=payment.id)
+            log.info("payment_completed", step="4/4", payment_id=payment.id, status="AUTHORIZED")
 
             return AuthorizePaymentResult(
                 payment_id=payment.id,
@@ -109,7 +109,9 @@ class PaymentService:
                 processed_at=payment.created_at,
             )
 
-    async def _validate_and_create_payment(self, cmd: AuthorizePaymentCommand) -> AuthorizePaymentResult:
+    async def _validate_and_create_payment(
+        self, cmd: AuthorizePaymentCommand, log: structlog.stdlib.BoundLogger
+    ) -> AuthorizePaymentResult:
         if cmd.amount_cents <= 0:
             return AuthorizePaymentResult(
                 payment_id="",
@@ -150,6 +152,12 @@ class PaymentService:
 
         payer_balance = await self.uow.balances.get(cmd.payer_account_id)
         if not payer_balance or payer_balance.available_balance_cents < cmd.amount_cents:
+            log.info(
+                "payment_declined",
+                reason="INSUFFICIENT_FUNDS",
+                available=payer_balance.available_balance_cents if payer_balance else 0,
+                required=cmd.amount_cents,
+            )
             return AuthorizePaymentResult(
                 payment_id="",
                 status=PaymentStatus.DECLINED,
@@ -157,6 +165,14 @@ class PaymentService:
                 error_message="Insufficient funds",
                 processed_at=datetime.now(UTC),
             )
+
+        log.info(
+            "payment_validated",
+            step="1/4",
+            payer=cmd.payer_account_id,
+            payee=cmd.payee_account_id,
+            amount=cmd.amount_cents,
+        )
 
         return AuthorizePaymentResult(
             payment_id="",
@@ -181,6 +197,14 @@ class PaymentService:
 
         new_payer_balance = payer_balance.available_balance_cents - payment.amount_cents
         new_payee_balance = payee_balance.available_balance_cents + payment.amount_cents
+
+        log.info(
+            "payment_transferring",
+            step="2/4",
+            payer_balance_before=payer_balance.available_balance_cents,
+            payee_balance_before=payee_balance.available_balance_cents,
+            amount=payment.amount_cents,
+        )
 
         debit_entry = LedgerEntry.create(
             payment_id=payment.id,
@@ -215,14 +239,29 @@ class PaymentService:
         )
 
         log.info(
-            "ledger_entries_created",
-            payment_id=payment.id,
-            debit_entry_id=debit_entry.id,
-            credit_entry_id=credit_entry.id,
+            "payment_ledger_created",
+            step="3/4",
+            payer_balance_after=new_payer_balance,
+            payee_balance_after=new_payee_balance,
         )
 
     async def get_payment(self, payment_id: str) -> Payment | None:
-        return await self.uow.payments.get(payment_id)
+        payment = await self.uow.payments.get(payment_id)
+        if payment:
+            logger.info(
+                "get_payment",
+                payment_id=payment.id,
+                status=payment.status.value,
+                amount=payment.amount_cents,
+            )
+        return payment
 
     async def get_account_balance(self, account_id: str) -> AccountBalance | None:
-        return await self.uow.balances.get(account_id)
+        balance = await self.uow.balances.get(account_id)
+        if balance:
+            logger.info(
+                "get_balance",
+                account_id=account_id,
+                available=balance.available_balance_cents,
+            )
+        return balance

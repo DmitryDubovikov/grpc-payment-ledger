@@ -22,7 +22,6 @@ uv run python -m grpc_tools.protoc \
     --grpc_python_out="$OUTPUT_DIR" \
     "$PROTO_DIR/payment/v1/payment.proto"
 
-# Fix import paths in generated files (from payment.v1 -> payment_service.proto.payment.v1)
 find "$OUTPUT_DIR" -name "*.py" -exec sed -i '' 's/^from payment\./from payment_service.proto.payment./' {} \; 2>/dev/null || \
     find "$OUTPUT_DIR" -name "*.py" -exec sed -i 's/^from payment\./from payment_service.proto.payment./' {} \;
 
