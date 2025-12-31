@@ -205,6 +205,7 @@ Environment variables (or `.env` file):
 
 - [gRPC API](docs/proto/payment-service.md)
 - [Database Schema](docs/database/schema.md)
+- [Event Schemas](docs/events/event-schemas.md)
 
 ## Development
 
@@ -265,6 +266,108 @@ docker run --rm --network=host fullstorydev/grpcurl -plaintext -d '{"account_id"
 ```bash
 alias grpcurl='docker run --rm --network=host fullstorydev/grpcurl'
 ```
+
+## Event Streaming
+
+The service implements the **Outbox Pattern** for reliable event publishing to Kafka/Redpanda.
+
+### Architecture
+
+```
+┌─────────────────────┐          ┌─────────────────────┐
+│   Payment Service   │          │   Outbox Processor  │
+│                     │          │   (Background)      │
+│  ┌───────────────┐  │          │                     │
+│  │ PaymentService│  │          │  ┌───────────────┐  │
+│  │               │  │          │  │ Poll outbox   │  │
+│  │ 1. Process    │  │          │  │ table for     │  │
+│  │    payment    │  │          │  │ unpublished   │  │
+│  │               │  │          │  │ events        │  │
+│  │ 2. Write to   │  │          │  └───────┬───────┘  │
+│  │    outbox     │──┼──────────┼──────────┘          │
+│  │    table      │  │          │                     │
+│  └───────────────┘  │          │  ┌───────────────┐  │
+└─────────────────────┘          │  │ Publish to    │  │
+          │                      │  │ Kafka/Redpanda│  │
+          │                      │  └───────┬───────┘  │
+          ▼                      └──────────┼──────────┘
+┌─────────────────────┐                     │
+│     PostgreSQL      │                     ▼
+│  ┌───────────────┐  │          ┌─────────────────────┐
+│  │ outbox table  │  │          │   Redpanda/Kafka    │
+│  │               │  │          │                     │
+│  │ - event_type  │  │          │ Topics:             │
+│  │ - payload     │  │          │ - payments.payment  │
+│  │ - published_at│  │          │   authorized        │
+│  │ - retry_count │  │          │ - payments.payment  │
+│  └───────────────┘  │          │   declined          │
+└─────────────────────┘          │ - payments.dlq      │
+                                 └─────────────────────┘
+```
+
+### How the Outbox Pattern Works
+
+1. **Atomic Write**: When a payment is processed, the service writes the payment record AND an outbox event in the same database transaction
+2. **Background Processing**: The OutboxProcessor polls the outbox table for unpublished events
+3. **Reliable Delivery**: Events are published to Kafka with exactly-once semantics (idempotent producer)
+4. **Retry with Backoff**: Failed events are retried with exponential backoff
+5. **Dead Letter Queue**: Events exceeding max retries are sent to a DLQ for manual inspection
+
+### Event Topics
+
+| Topic | Description |
+|-------|-------------|
+| `payments.paymentauthorized` | Successful payment authorizations |
+| `payments.paymentdeclined` | Declined payment attempts |
+| `payments.dlq` | Dead letter queue for failed events |
+
+### Running the Outbox Processor
+
+```bash
+# Run as Docker service (recommended for production)
+docker-compose up -d outbox-processor
+
+# View logs
+make outbox-logs
+
+# Run locally for development
+make run-outbox-processor
+```
+
+### Consuming Events
+
+```bash
+# Run the sample consumer
+make run-sample-consumer
+
+# Or consume directly with rpk
+make kafka-consume
+```
+
+See [Event Schemas](docs/events/event-schemas.md) for detailed event documentation.
+
+### Kafka/Redpanda Commands
+
+| Command | Description |
+|---------|-------------|
+| `make kafka-topics` | List all topics |
+| `make kafka-create-topics` | Create required topics |
+| `make kafka-consume` | Consume payment authorized events |
+| `make kafka-consume-dlq` | Consume dead letter queue |
+
+### Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `REDPANDA_BROKERS` | `localhost:19092` | Kafka/Redpanda broker addresses |
+| `KAFKA_TOPIC_PREFIX` | `payments` | Topic name prefix |
+| `OUTBOX_BATCH_SIZE` | `100` | Events per batch |
+| `OUTBOX_POLL_INTERVAL_SECONDS` | `1.0` | Polling interval |
+| `OUTBOX_MAX_RETRIES` | `5` | Max retry attempts before DLQ |
+| `OUTBOX_BASE_DELAY_SECONDS` | `1.0` | Base delay for exponential backoff |
+| `OUTBOX_MAX_DELAY_SECONDS` | `60.0` | Maximum backoff delay |
+
+---
 
 ## Domain Model
 

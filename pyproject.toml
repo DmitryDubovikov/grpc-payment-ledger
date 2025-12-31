@@ -16,6 +16,8 @@ dependencies = [
     "structlog>=24.1.0",
     "redis>=5.0.0",
     "python-ulid>=2.2.0",
+    "aiokafka>=0.10.0",
+    "jsonschema>=4.21.0",
 ]
 
 [project.optional-dependencies]
@@ -70,9 +72,13 @@ ignore = [
 "tests/**/*.py" = [
     "ARG",    # unused arguments in tests (fixtures)
     "PLR2004", # magic values in tests are fine
+    "PLC0415", # imports inside functions in tests (needed for mocking)
 ]
 "src/payment_service/proto/**/*.py" = [
     "ALL",    # ignore generated protobuf files
+]
+"scripts/**/*.py" = [
+    "ALL",    # scripts are standalone and may have non-standard patterns
 ]
 
 [tool.ruff.lint.isort]
@@ -100,6 +106,10 @@ module = [
     "grpc_reflection",
     "grpc_reflection.*",
     "payment_service.proto.*",
+    "aiokafka",
+    "aiokafka.*",
+    "jsonschema",
+    "jsonschema.*",
 ]
 ignore_missing_imports = true
 

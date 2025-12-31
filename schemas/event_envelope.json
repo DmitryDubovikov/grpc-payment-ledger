@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://payment-service.example.com/schemas/event_envelope.json",
+  "title": "EventEnvelope",
+  "description": "Base envelope for all payment service events",
+  "type": "object",
+  "required": [
+    "event_id",
+    "aggregate_type",
+    "aggregate_id",
+    "event_type",
+    "payload",
+    "timestamp"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "aggregate_type": {
+      "type": "string",
+      "description": "Type of aggregate that produced the event",
+      "enum": ["Payment", "Account"]
+    },
+    "aggregate_id": {
+      "type": "string",
+      "description": "ID of the aggregate (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Type of event",
+      "enum": ["PaymentAuthorized", "PaymentDeclined"]
+    },
+    "payload": {
+      "type": "object",
+      "description": "Event-specific payload"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the event was created"
+    }
+  },
+  "additionalProperties": false
+}

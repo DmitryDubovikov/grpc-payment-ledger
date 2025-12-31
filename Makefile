@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint lint-fix type-check test test-unit test-integration test-e2e test-cov proto clean docker-build docker-up docker-down db-migrate db-upgrade db-downgrade run up dev-up dev-down migrate grpc-list grpc-health grpc-describe
+.PHONY: help install install-dev format lint lint-fix type-check test test-unit test-integration test-e2e test-cov proto clean docker-build docker-up docker-down db-migrate db-upgrade db-downgrade run up dev-up dev-down migrate grpc-list grpc-health grpc-describe run-outbox-processor run-sample-consumer outbox-logs kafka-topics kafka-consume
 
 # Default target
 help:
@@ -31,6 +31,15 @@ help:
 	@echo "    make db-migrate     Create new migration"
 	@echo "    make db-upgrade     Apply all migrations"
 	@echo "    make db-downgrade   Rollback last migration"
+	@echo ""
+	@echo "  Event Streaming:"
+	@echo "    make run-outbox-processor  Run outbox processor locally"
+	@echo "    make run-sample-consumer   Run sample event consumer locally"
+	@echo "    make outbox-logs           View outbox processor logs"
+	@echo "    make kafka-topics          List Kafka/Redpanda topics"
+	@echo "    make kafka-create-topics   Create required topics"
+	@echo "    make kafka-consume         Consume payment events"
+	@echo "    make kafka-consume-dlq     Consume dead letter queue events"
 	@echo ""
 	@echo "  Misc:"
 	@echo "    make clean          Remove generated files and caches"
@@ -198,3 +207,29 @@ grpc-health:
 
 grpc-describe:
 	docker run --rm --network=host fullstorydev/grpcurl -plaintext localhost:50051 describe payment.v1.PaymentService
+
+# =============================================================================
+# Outbox Processor & Event Streaming
+# =============================================================================
+
+run-outbox-processor:
+	$(PYTHONPATH) uv run python scripts/run_outbox_processor.py
+
+run-sample-consumer:
+	$(PYTHONPATH) uv run python scripts/sample_consumer.py
+
+outbox-logs:
+	docker-compose logs -f outbox-processor
+
+# Kafka/Redpanda utilities (via rpk in container)
+kafka-topics:
+	docker-compose exec redpanda rpk topic list
+
+kafka-create-topics:
+	docker-compose exec redpanda rpk topic create payments.paymentauthorized payments.paymentdeclined payments.dlq --partitions 3
+
+kafka-consume:
+	docker-compose exec redpanda rpk topic consume payments.paymentauthorized --format json
+
+kafka-consume-dlq:
+	docker-compose exec redpanda rpk topic consume payments.dlq --format json

@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://payment-service.example.com/schemas/dead_letter.json",
+  "title": "DeadLetterEvent",
+  "description": "Event sent to DLQ after max retries exceeded",
+  "type": "object",
+  "required": [
+    "event_id",
+    "aggregate_type",
+    "aggregate_id",
+    "event_type",
+    "payload",
+    "timestamp",
+    "retry_count",
+    "failed_at",
+    "error"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Original event identifier (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "aggregate_type": {
+      "type": "string",
+      "description": "Type of aggregate that produced the event"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "description": "ID of the aggregate"
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Original event type"
+    },
+    "payload": {
+      "type": "object",
+      "description": "Original event payload"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Original event timestamp"
+    },
+    "retry_count": {
+      "type": "integer",
+      "description": "Number of retry attempts",
+      "minimum": 0
+    },
+    "failed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when the event was moved to DLQ"
+    },
+    "error": {
+      "type": "string",
+      "description": "Reason for failure"
+    }
+  },
+  "additionalProperties": false
+}

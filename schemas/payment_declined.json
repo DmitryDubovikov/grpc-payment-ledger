@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://payment-service.example.com/schemas/payment_declined.json",
+  "title": "PaymentDeclined",
+  "description": "Event published when a payment is declined",
+  "type": "object",
+  "required": [
+    "event_id",
+    "aggregate_type",
+    "aggregate_id",
+    "event_type",
+    "payload",
+    "timestamp"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "aggregate_type": {
+      "const": "Payment"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "description": "Payment ID (ULID or empty if not created)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "event_type": {
+      "const": "PaymentDeclined"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "payer_account_id",
+        "payee_account_id",
+        "amount_cents",
+        "currency",
+        "error_code",
+        "error_message"
+      ],
+      "properties": {
+        "payment_id": {
+          "type": "string",
+          "description": "Payment ID if payment record was created"
+        },
+        "payer_account_id": {
+          "type": "string",
+          "description": "Payer account ID"
+        },
+        "payee_account_id": {
+          "type": "string",
+          "description": "Payee account ID"
+        },
+        "amount_cents": {
+          "type": "integer",
+          "description": "Requested amount in cents",
+          "minimum": 1
+        },
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217 currency code",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "error_code": {
+          "type": "string",
+          "description": "Error code",
+          "enum": [
+            "INSUFFICIENT_FUNDS",
+            "ACCOUNT_NOT_FOUND",
+            "INVALID_AMOUNT",
+            "SAME_ACCOUNT",
+            "CURRENCY_MISMATCH"
+          ]
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Human-readable error message"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the event was created"
+    }
+  },
+  "additionalProperties": false
+}

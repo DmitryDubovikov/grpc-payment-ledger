@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://payment-service.example.com/schemas/payment_authorized.json",
+  "title": "PaymentAuthorized",
+  "description": "Event published when a payment is successfully authorized",
+  "type": "object",
+  "required": [
+    "event_id",
+    "aggregate_type",
+    "aggregate_id",
+    "event_type",
+    "payload",
+    "timestamp"
+  ],
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "aggregate_type": {
+      "const": "Payment"
+    },
+    "aggregate_id": {
+      "type": "string",
+      "description": "Payment ID (ULID)",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "event_type": {
+      "const": "PaymentAuthorized"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "payment_id",
+        "payer_account_id",
+        "payee_account_id",
+        "amount_cents",
+        "currency"
+      ],
+      "properties": {
+        "payment_id": {
+          "type": "string",
+          "description": "Payment ID (ULID)",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "payer_account_id": {
+          "type": "string",
+          "description": "Payer account ID (ULID)",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "payee_account_id": {
+          "type": "string",
+          "description": "Payee account ID (ULID)",
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+        },
+        "amount_cents": {
+          "type": "integer",
+          "description": "Amount in smallest currency unit (cents)",
+          "minimum": 1
+        },
+        "currency": {
+          "type": "string",
+          "description": "ISO 4217 currency code",
+          "pattern": "^[A-Z]{3}$"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional payment description"
+        }
+      },
+      "additionalProperties": false
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when the event was created"
+    }
+  },
+  "additionalProperties": false
+}

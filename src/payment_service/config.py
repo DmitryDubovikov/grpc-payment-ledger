@@ -19,5 +19,15 @@ class Settings(BaseSettings):
 
     grpc_port: int = 50051
 
+    # Outbox processor settings
+    outbox_batch_size: int = 100
+    outbox_poll_interval_seconds: float = 1.0
+    outbox_max_retries: int = 5
+    outbox_base_delay_seconds: float = 1.0
+    outbox_max_delay_seconds: float = 60.0
+
+    # Kafka/Redpanda topic settings
+    kafka_topic_prefix: str = "payments"
+
 
 settings = Settings()

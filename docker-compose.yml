@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: runtime
     ports:
       - "50051:50051"
     environment:
@@ -23,6 +24,27 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+
+  outbox-processor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: outbox-processor
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://payment:payment@postgres:5432/payment_db
+      - REDIS_URL=redis://redis:6379/0
+      - REDPANDA_BROKERS=redpanda:9092
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - OUTBOX_BATCH_SIZE=100
+      - OUTBOX_POLL_INTERVAL_SECONDS=1.0
+      - OUTBOX_MAX_RETRIES=5
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
