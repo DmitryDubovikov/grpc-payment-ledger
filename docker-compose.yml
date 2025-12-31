@@ -6,12 +6,18 @@ services:
       target: runtime
     ports:
       - "50051:50051"
+      - "9090:9090"
     environment:
       - DATABASE_URL=postgresql+asyncpg://payment:payment@postgres:5432/payment_db
       - REDIS_URL=redis://redis:6379/0
       - REDPANDA_BROKERS=redpanda:9092
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_MAX_REQUESTS=1000
+      - RATE_LIMIT_WINDOW_SECONDS=60
+      - METRICS_ENABLED=true
+      - METRICS_PORT=9090
     depends_on:
       postgres:
         condition: service_healthy

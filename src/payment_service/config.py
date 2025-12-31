@@ -29,5 +29,15 @@ class Settings(BaseSettings):
     # Kafka/Redpanda topic settings
     kafka_topic_prefix: str = "payments"
 
+    # Rate limiting settings
+    rate_limit_enabled: bool = True
+    rate_limit_max_requests: int = 100
+    rate_limit_window_seconds: int = 60
+
+    # Metrics settings
+    metrics_enabled: bool = True
+    metrics_host: str = "0.0.0.0"
+    metrics_port: int = 9090
+
 
 settings = Settings()

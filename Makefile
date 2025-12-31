@@ -1,4 +1,4 @@
-.PHONY: help install install-dev format lint lint-fix type-check test test-unit test-integration test-e2e test-cov proto clean docker-build docker-up docker-down db-migrate db-upgrade db-downgrade run up dev-up dev-down migrate grpc-list grpc-health grpc-describe run-outbox-processor run-sample-consumer outbox-logs kafka-topics kafka-consume
+.PHONY: help install install-dev format lint lint-fix type-check test test-unit test-integration test-e2e test-cov proto clean docker-build docker-up docker-down db-migrate db-upgrade db-downgrade run up dev-up dev-down migrate grpc-list grpc-health grpc-describe run-outbox-processor run-sample-consumer outbox-logs kafka-topics kafka-consume load-test metrics-check
 
 # Default target
 help:
@@ -40,6 +40,10 @@ help:
 	@echo "    make kafka-create-topics   Create required topics"
 	@echo "    make kafka-consume         Consume payment events"
 	@echo "    make kafka-consume-dlq     Consume dead letter queue events"
+	@echo ""
+	@echo "  Production Readiness:"
+	@echo "    make load-test             Run k6 load tests"
+	@echo "    make metrics-check         Check Prometheus metrics endpoint"
 	@echo ""
 	@echo "  Misc:"
 	@echo "    make clean          Remove generated files and caches"
@@ -233,3 +237,23 @@ kafka-consume:
 
 kafka-consume-dlq:
 	docker-compose exec redpanda rpk topic consume payments.dlq --format json
+
+# =============================================================================
+# Production Readiness
+# =============================================================================
+
+load-test:
+	@echo "Running k6 load tests..."
+	@echo "Make sure the service is running with 'make up && make migrate'"
+	docker run --rm --network=host -v $(CURDIR):/scripts -w /scripts grafana/k6:latest run load-tests/payment_load_test.js
+
+load-test-smoke:
+	docker run --rm --network=host -v $(CURDIR):/scripts -w /scripts grafana/k6:latest run --vus 1 --duration 30s load-tests/payment_load_test.js
+
+metrics-check:
+	@echo "Checking Prometheus metrics endpoint..."
+	curl -s http://localhost:9090/metrics | head -50
+
+metrics-payment:
+	@echo "Payment-related metrics:"
+	curl -s http://localhost:9090/metrics | grep -E "^(payment_|grpc_|rate_limit)" | head -30
