@@ -82,7 +82,6 @@ Thumbs.db
 # Project documentation (generated)
 IMPLEMENTATION_PLAN.md
 venmo_grpc_pet_project_plan.txt
-docs/
 
 # Generated protobuf files (optional - uncomment if you prefer to regenerate)
 # src/payment_service/proto/payment/
